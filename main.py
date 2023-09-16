@@ -99,7 +99,7 @@ class ConcaveMirror:
 
 def pick_points(mirror, object):
     mirror.picked_points = []
-    for _ in range(10):
+    for _ in range(5):
         mirror.picked_points.append(Vector2(choice(mirror.points)))
 
     reflect(mirror, object)

@@ -1,5 +1,5 @@
-# Concave Mirror Simulation
-Simulation of reflection by a concave mirror using pygame.
+# Ray Optics
+Simulation of reflection by a concave mirror(for now maybe idk) using pygame.
 
 # Installation
 To install the necessary packages run,

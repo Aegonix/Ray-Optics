@@ -8,6 +8,7 @@ from random import choice
 from button import Button
 from sympy import Eq, solve
 from sympy.abc import x, y
+from itertools import combinations
 
 pygame.init()
 
@@ -20,11 +21,13 @@ win = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Concave Mirror")
 font = SysFont("JetBrains Mono", 20)
 
-f_slider = Slider(win, 950, 250, 200, 15, min=50, max=300, handleColour=WHITE)
+n_slider = Slider(win, 950, 170, 200, 15, min=2, max = 20, handleColour = WHITE)
+n_label = font.render("Number of Rays:", True, WHITE)
+f_slider = Slider(win, 950, 270, 200, 15, min=50, max=300, handleColour=WHITE)
 f_label = font.render("Focal Length:", True, WHITE)
-u_slider = Slider(win, 950, 350, 200, 15, min=50, max=450, handleColour=WHITE)
+u_slider = Slider(win, 950, 370, 200, 15, min=50, max=450, handleColour=WHITE)
 u_label = font.render("Object Distance:", True, WHITE)
-h_slider = Slider(win, 950, 450, 200, 15, min=20, max=200, handleColour=WHITE)
+h_slider = Slider(win, 950, 470, 200, 15, min=0, max=200, handleColour=WHITE)
 h_label = font.render("Object Height:", True, WHITE)
 F_label = font.render("F", True, WHITE)
 C_label = font.render("C", True, WHITE)
@@ -56,17 +59,13 @@ class ConcaveMirror:
         self.f = int(f_slider.getValue()) # type: ignore
         self.radius = 2 * self.f
         self.pole = Vector2(450, 350)
-        self.principal_axis = pygame.draw.aaline(
-            win, WHITE, (0, self.pole.y), (900, self.pole.y)
-        )
+        pygame.draw.aaline(win, WHITE, (0, self.pole.y), (900, self.pole.y))
         self.rect = pygame.Rect(
             self.pole.x - 2 * self.radius,
             self.pole.y - self.radius,
             2 * self.radius,
             2 * self.radius,
         )
-        self.top = ()
-        self.bottom = ()
         self.points = self.get_points()
 
     def get_points(self):
@@ -99,25 +98,25 @@ class ConcaveMirror:
 
 def pick_points(mirror, object):
     mirror.picked_points = []
-    for _ in range(5):
+    for _ in range(n_slider.getValue()):
         mirror.picked_points.append(Vector2(choice(mirror.points)))
 
     reflect(mirror, object)
 
 
 def draw_rays(mirror, object):
-    for point in mirror.picked_points:
+    for point in mirror.picked_points:  
         pygame.draw.aaline(win, WHITE, (object.x, object.y), point)
-        for pos in object.images:
-            pygame.draw.circle(win, WHITE, pos, 5)
-            threshold = (((pos.y - mirror.pole.y) ** 2) / -(4 * mirror.f)) + mirror.pole.x
-            if pos.x > threshold:
-                draw_dotted(point, pos)
+    
+    for pos in object.images:
+        pygame.draw.circle(win, RED, pos, 5)
 
     for point, vector in mirror.reflected_vectors.items():
         point = Vector2(point)
         vector = Vector2(-point.x, -point.x / vector.x * vector.y)
         pygame.draw.aaline(win, WHITE, point, point + vector)
+        vector = Vector2(point.x - 900, (point.x - 900) / vector.x * vector.y)
+        draw_dotted(point, point - vector)
 
 
 def draw_dotted(p1: Vector2, p2: Vector2):
@@ -147,17 +146,25 @@ def reflect(mirror: ConcaveMirror, object: Object):
         equation = Eq(y - p.y, m * (x - p.x))
         equations.append(equation)
 
-    for eq1 in equations:
-        for eq2 in equations:
-            if eq1 != eq2:
-                solution = solve((eq1, eq2), (x, y))
-                object.images.append(Vector2(list(solution.values())))
+    for pair in combinations(equations, 2):
+        solution = solve(pair, (x, y))
+        if solution:
+            object.images.append(Vector2(list(solution.values())))
 
 def draw(mirror, object, draw_button, events):
     win.fill(BLACK)
-    win.blit(f_label, (950, 210))
-    win.blit(u_label, (950, 310))
-    win.blit(h_label, (950, 410))
+    win.blit(n_label, (950, 130))
+    n_value = font.render(str(n_slider.getValue()), True, WHITE)
+    win.blit(n_value, (1050 - n_value.get_width() / 2, 194))
+    win.blit(f_label, (950, 230))
+    f_value = font.render(str(f_slider.getValue()), True, WHITE)
+    win.blit(f_value, (1050 - f_value.get_width() / 2, 294))
+    win.blit(u_label, (950, 330))
+    u_value = font.render(str(u_slider.getValue()), True, WHITE)
+    win.blit(u_value, (1050 - u_value.get_width() / 2, 394))
+    win.blit(h_label, (950, 430))
+    h_value = font.render(str(h_slider.getValue()), True, WHITE)
+    win.blit(h_value, (1050 - h_value.get_width() / 2, 494))
     win.blit(F_label, (mirror.pole.x - mirror.f - C_label.get_width() / 2, 360))
     win.blit(
         C_label,
@@ -178,7 +185,7 @@ def main():
     mirror = ConcaveMirror()
     object = Object(mirror)
     draw_button = Button(
-        950, 500, 50, 200, BLACK, "Draw Rays", lambda: pick_points(mirror, object)
+        950, 530, 50, 200, BLACK, "Draw Rays", lambda: pick_points(mirror, object)
     )
     while running:
         events = pygame.event.get()

@@ -6,8 +6,10 @@ from pygame_widgets.slider import Slider
 from math import sqrt, trunc
 from random import choice
 from button import Button
-from sympy import Eq, solve
-from sympy.abc import x, y
+
+# from sympy import Eq, solve
+# from sympy.abc import x, y
+from numpy.linalg import solve
 from itertools import combinations
 
 pygame.init()
@@ -21,9 +23,11 @@ win = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Concave Mirror")
 font = SysFont("JetBrains Mono", 20)
 
-n_slider = Slider(win, 950, 170, 200, 15, min=2, max = 20, handleColour = WHITE)
+n_slider = Slider(win, 950, 170, 200, 15, min=2, max=20, handleColour=WHITE)
 n_label = font.render("Number of Rays:", True, WHITE)
-f_slider = Slider(win, 950, 270, 200, 15, min=50, max=300, handleColour=WHITE)
+f_slider = Slider(
+    win, 950, 270, 200, 15, min=50, max=300, initial=150, handleColour=WHITE
+)
 f_label = font.render("Focal Length:", True, WHITE)
 u_slider = Slider(win, 950, 370, 200, 15, min=50, max=450, handleColour=WHITE)
 u_label = font.render("Object Distance:", True, WHITE)
@@ -56,7 +60,7 @@ class ConcaveMirror:
     reflected_vectors = {}
 
     def __init__(self) -> None:
-        self.f = int(f_slider.getValue()) # type: ignore
+        self.f = int(f_slider.getValue())  # type: ignore
         self.radius = 2 * self.f
         self.pole = Vector2(450, 350)
         pygame.draw.aaline(win, WHITE, (0, self.pole.y), (900, self.pole.y))
@@ -69,7 +73,7 @@ class ConcaveMirror:
         self.points = self.get_points()
 
     def get_points(self):
-        x_vals = range(int(self.pole.x - self.f + 50) * 100, (int(self.pole.x) * 100))
+        x_vals = range(int(self.pole.x - self.f) * 100, (int(self.pole.x) * 100))
         x_vals = [x / 100 for x in x_vals]
         points = []
         for x in x_vals:
@@ -105,18 +109,18 @@ def pick_points(mirror, object):
 
 
 def draw_rays(mirror, object):
-    for point in mirror.picked_points:  
+    for point in mirror.picked_points:
         pygame.draw.aaline(win, WHITE, (object.x, object.y), point)
-    
+
     for pos in object.images:
-        pygame.draw.circle(win, RED, pos, 5)
+        pos = [round(x, 0) for x in pos]
+        pygame.draw.circle(win, RED, pos, 8)
 
     for point, vector in mirror.reflected_vectors.items():
         point = Vector2(point)
-        vector = Vector2(-point.x, -point.x / vector.x * vector.y)
-        pygame.draw.aaline(win, WHITE, point, point + vector)
         vector = Vector2(point.x - 900, (point.x - 900) / vector.x * vector.y)
         draw_dotted(point, point - vector)
+        pygame.draw.aaline(win, WHITE, point, point + vector)
 
 
 def draw_dotted(p1: Vector2, p2: Vector2):
@@ -143,13 +147,13 @@ def reflect(mirror: ConcaveMirror, object: Object):
 
         p = point + reflected_vector
         m = (point.y - p.y) / (point.x - p.x)
-        equation = Eq(y - p.y, m * (x - p.x))
+        equation = {"a": [m, -1], "b": [(m * p.x) - p.y]}
         equations.append(equation)
 
-    for pair in combinations(equations, 2):
-        solution = solve(pair, (x, y))
-        if solution:
-            object.images.append(Vector2(list(solution.values())))
+    for eq1, eq2 in combinations(equations, 2):
+        solution = solve([eq1["a"], eq2["a"]], [eq1["b"], eq2["b"]])
+        object.images.append(Vector2(list(solution.flatten())))
+
 
 def draw(mirror, object, draw_button, events):
     win.fill(BLACK)

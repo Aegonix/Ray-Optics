@@ -114,7 +114,7 @@ def draw_rays(mirror, object):
 
     for pos in object.images:
         pos = [round(x, 0) for x in pos]
-        pygame.draw.circle(win, RED, pos, 8)
+        pygame.draw.circle(win, RED, pos, 5)
 
     for point, vector in mirror.reflected_vectors.items():
         point = Vector2(point)
